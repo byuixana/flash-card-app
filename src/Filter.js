@@ -11,9 +11,11 @@ import { useMemo } from 'react';
 export default function Filter(){
     const { cardArray, selectedCardIds, setCardSelection } = useFlashcardContext();
 
-    const cardAnswers = useMemo(() => {
-        const uniqueAnswers = cardArray.map(card => card.answer).filter(Boolean);
-        return [...new Set(uniqueAnswers)].sort();
+    // compute unique questions from current deck
+
+    const cardQuestions = useMemo(() => {
+        const uniqueQuestions = cardArray.map(card => card.question).filter(Boolean);
+        return [...new Set(uniqueQuestions)].sort();
     }, [cardArray])
 
     function handleSelectionChange(event) {
@@ -21,7 +23,7 @@ export default function Filter(){
         
         // Handle special options
         if (selectedValues.includes('__SELECT_ALL__')) {
-            const allIds = cardArray.map(card => card.img_src);
+            const allIds = cardArray.map(card => card.id);
             setCardSelection(allIds);
             return;
         }
@@ -33,29 +35,41 @@ export default function Filter(){
     
         // Find every card that belongs to the chosen answers
         const idsToEnable = cardArray
-            .filter(card => selectedValues.includes(card.answer))
-            .map(card => card.img_src);
+            .filter(card => selectedValues.includes(card.question))
+            .map(card => card.id);
 
         setCardSelection(idsToEnable); 
         // This replaces the set, immediately removing cards not in these subjects
     };
 
 
-
+    // This will change whenever selection or cardArray changes. 
+    const selectedQuestions = useMemo(() => {
+        // For each question, check if its id is still selected and ensure 
+        // its question has some match in the deck. 
+        // Question strings are checked because that is what the the filter is deriving from the deck. 
+        // If both match, include in the dropdown.
+        return cardQuestions.filter(question =>
+            cardArray.some(c => c.question === question && selectedCardIds.has(c.id))
+        );
+    }, [cardQuestions, cardArray, selectedCardIds]);
 
         
     return (
-        <form className="flex flex-row items-center justify-end w-[50%] p-1">
+        <form className="flex flex-row items-center justify-end w-full sm:w-2/5 p-1 min-w-0">
             <label htmlFor="cards-select" className="
                 flex
+                items-center
+                justify-center
                 text-center
+                text-sm sm:text-base
                 p-1
                 text-white 
                 bg-blue-500 
                 outline-blue-500
                 outline
-                h-8
-                w-[40%]
+                h-7 sm:h-8
+                w-[36%] sm:w-[40%]
             ">Cards</label>
             <select 
                 id="cards-select"
@@ -63,25 +77,23 @@ export default function Filter(){
                 size="1"
                 className="
                 hide-selected-count 
+                text-sm sm:text-base
                 p-1
                 outline-blue-500
                 outline
-                h-8
-                w-[90%]
+                h-7 sm:h-8
+                w-[64%] sm:w-[60%]
+                min-w-0
                 "
-                value={cardAnswers.filter
-                        (answer => 
-                            cardArray.some(c => c.answer === answer && selectedCardIds.has(c.img_src))
-                        )
-                    }
+                value={ selectedQuestions }
 
                 onChange={handleSelectionChange}
             >
                 <option value="__SELECT_ALL__">Select All</option>
                 <option value="__DESELECT_ALL__">Deselect All</option>
-                {cardAnswers.map(answer => (
-                    <option key={answer} value={answer}>
-                        {answer}
+                {cardQuestions.map(question => (
+                    <option key={question} value={question}>
+                        {question}
                     </option>
                 ))}
             </select>

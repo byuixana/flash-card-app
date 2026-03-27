@@ -17,7 +17,7 @@ import {useState, useEffect} from 'react';
 import { useFlashcardContext } from './context/FlashcardContext.js';
 
 export default function Card({cardData, moveNext, resetTrigger}){
-
+    const { selectedCardIds } = useFlashcardContext();
     const { markCardAsKnown } = useFlashcardContext();
     const [isFlipped, setFlipped] = useState(false)
     const [correct, setCorrect] = useState(false)
@@ -31,14 +31,15 @@ export default function Card({cardData, moveNext, resetTrigger}){
     // Get question and answer from cardData
     const question = cardData?.question
     const answer = cardData?.answer
-    const img = cardData?.img_src
+    const rawImg = cardData?.img_src ?? cardData?.img ?? cardData?.image
+    const img = typeof rawImg === 'string' ? rawImg.trim() : ''
+    const hasImage = img.length > 0
 
     return (
         <div
-            className="relative mx-auto w-screen
-            ml-10 mr-10
+            onClick={() => setFlipped((prev) => !prev)}
+            className="relative mx-auto w-[min(92vw,calc(84vh*9/16))]
             max-w-[480px]
-            max-h-[500px]
             aspect-[9/16] origin-center transition-transform duration-[600ms] 
             [transform-style:preserve-3d] outline outline-1 outline-blue-500
             rounded shadow-sm"
@@ -47,19 +48,20 @@ export default function Card({cardData, moveNext, resetTrigger}){
         
             {/* Front Side */}
             <div
-                onClick={() => setFlipped(true)}
                 style={{ backfaceVisibility: 'hidden' }}
                 className="absolute inset-0 flex flex-col items-center justify-center
-                h-fit max-h-[100%]
+                h-full w-full
                  bg-white rounded p-6 cursor-pointer"
             >
+                {hasImage && (
                 <img
                     src={img}
                     alt="Question"
-                    className="w-full h-fit mb-4 rounded overflow-hidden object-contain"
-                    style={{ width: '100%', aspectRatio: '9 / 16'}}
+                    className="w-full max-h-96 mb-4 rounded overflow-hidden object-contain"
+                    style={{ width: '100%', aspectRatio: '9 / 16' }}
                 />
-                <div className="text-center">{question}</div>
+                )}
+                <div className="w-full flex-1 flex items-center justify-center text-center text-lg sm:text-xl">{question}</div>
             </div>
 
             {/* Back Side */}
@@ -67,18 +69,21 @@ export default function Card({cardData, moveNext, resetTrigger}){
                 style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
                 className="absolute inset-0 flex flex-col items-center justify-center bg-white rounded p-6"
             >
+                {hasImage && (
                 <img
                     src={img}
                     alt="Answer"
                     className="w-full max-h-96 mb-4 rounded overflow-hidden object-contain"
                     style={{ width: '100%', aspectRatio: '9 / 16' }}
                 />
-                <div className="text-center mb-4">{answer}</div>
+                )}
+                <div className="text-center text-lg sm:text-xl mb-4">{answer}</div>
 
                 <div className={`flex flex-row ${isFlipped ? 'visible' : 'hidden'}`}>
                     <button
                         className="rounded-full bg-green-500 font-bold p-2 m-2 w-fit h-fit"
-                        onClick={() => {
+                        onClick={(e) => {
+                            e.stopPropagation();
                             setCorrect(true);
                             markCardAsKnown(cardData);
                             moveNext();
@@ -90,8 +95,15 @@ export default function Card({cardData, moveNext, resetTrigger}){
                     </button>
                     <button
                         className="rounded-full bg-red-500 font-bold p-2 m-2 w-fit h-fit"
-                        onClick={() => {
+                        onClick={(e) => {
+                            e.stopPropagation();
                             setCorrect(false);
+                            if (selectedCardIds.size === 1) {
+                                // If this is the last card and they got it wrong, flip it back to the front instead of moving next (which would cause an infinite loop of blank cards)
+                                setFlipped(false);
+                                setCorrect(false);
+                                return;
+                            }
                             moveNext();
                         }}
                     >

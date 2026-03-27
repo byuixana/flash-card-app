@@ -21,18 +21,21 @@ export default function FlashcardContextProvider({ children }) {
     // Get filtered cards (apply selection filter and filter out known cards)
     const getFilteredCards = () => {
         return cardArray.filter((card) => 
-            selectedCardIds.has(card.img_src) && !card.isKnown
+            selectedCardIds.has(card.id) && !card.isKnown
         )
     };
 
     const filteredCards = getFilteredCards();
 
-    // Automatically select all cards when cardArray is first loaded
+    // Automatically select all cards when cardArray changes (new deck)
+    // and reset the filter so the dropdown reflects the current cards.
     useEffect(() => {
-        if (cardArray.length > 0 && selectedCardIds.size === 0) {
-            // Select all cards by default
-            const allIds = cardArray.map(card => card.img_src);
+        if (cardArray.length > 0) {
+            // Select all cards by default for the new deck
+            const allIds = cardArray.map(card => card.id);
             setSelectedCardIds(new Set(allIds));
+            // also reset index in case it was outside new bounds
+            setCurrentIndex(0);
         }
     }, [cardArray]);
 
@@ -40,7 +43,7 @@ export default function FlashcardContextProvider({ children }) {
     const markCardAsKnown = (cardData) => {
         setSelectedCardIds((prev) => {
             const newSet = new Set(prev);
-            newSet.delete(cardData.img_src);
+            newSet.delete(cardData.id);
             return newSet
         })
     }
@@ -76,7 +79,7 @@ export default function FlashcardContextProvider({ children }) {
     };
 
     const clearSelection = () => {
-        const allIds = cardArray.map(card => card.img_src);
+        const allIds = cardArray.map(card => card.id);
         setSelectedCardIds(new Set(allIds));
         setCurrentIndex(0);
     };

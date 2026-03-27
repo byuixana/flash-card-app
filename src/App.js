@@ -28,9 +28,13 @@ function AppContent() {
     console.log('Link in', link)
     if (!link) return;
 
+    let isCancelled = false;
+    setIsLoading(true);
+
     fetch(link)
     .then(response => response.json())
     .then(data => {
+      if (isCancelled) return;
       const cardArray = Object.values(data);
       const shuffledCardArray = shuffleCards(cardArray);
       addFlags(shuffledCardArray);
@@ -38,10 +42,15 @@ function AppContent() {
       setIsLoading(false);
     })
     .catch(error => {
+      if (isCancelled) return;
       console.error("Error fetching data:", error);
       setIsLoading(false);
     });
-  }, [link, setCardArray]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [setCardArray, link]);
 
   return (
     <>
@@ -52,7 +61,7 @@ function AppContent() {
         shadow-md'> 
         <h1 className='text-center text-3xl font-bold m-4 w-screen md:w-screen lg:w-screen sm:w-screen'>Bio 264 Flashcards</h1>
       </div>
-      <div className="flex flex-row justify-center items-center w-[50%$]">
+      <div className="flex flex-col sm:flex-row justify-center items-stretch sm:items-center w-[92vw] max-w-[480px]">
         <LabDeckSelector onSelection={setLink} />
         <Filter />
       </div>
